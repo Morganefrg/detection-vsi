@@ -1,0 +1,19 @@
+# Environnement virtuel
+venv/
+
+# Variables secrètes
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Modèles YOLO (trop lourds)
+*.pt
+
+# Données sensibles
+data/
+
+# VS Code
+.vscode/

@@ -1,0 +1,14 @@
+zones:
+  - name: "zone_surveillance"
+    coords:
+      - [100, 200]
+      - [500, 200]
+      - [500, 450]
+      - [100, 450]
+
+  - name: "parking_handicap"
+    coords:
+      - [550, 200]
+      - [750, 200]
+      - [750, 450]
+      - [550, 450]

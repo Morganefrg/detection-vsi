@@ -116,7 +116,7 @@ def run_pipeline(source: str, model_path: str, zones_path: str,
                     if frames_in_zone >= 30:
                         key = f"loitering_{zone_name}"
                         if violation_memory[track_id].get(key) is None:
-                            insert_violation(int(track_id), "loitering")
+                            insert_violation(int(track_id), "loitering", zone=zone_name)
                             violation_memory[track_id][key] = now
                             alerts.append((f"⚠ LOITERING ! ID:{track_id} zone:{zone_name}",
                                           (0, 165, 255)))
@@ -144,6 +144,15 @@ def run_pipeline(source: str, model_path: str, zones_path: str,
             (msg, col, t) for msg, col, t in persistent_alerts
             if now_display - t < 3
         ]
+
+        # Dessin des zones de surveillance
+        for zone in zones:
+            pts = np.array(zone["coords"], dtype=np.int32)
+            cv2.polylines(frame, [pts], isClosed=True, color=(255, 255, 0), thickness=2)
+            cx = int(np.mean(pts[:, 0]))
+            cy = int(np.mean(pts[:, 1]))
+            cv2.putText(frame, zone["name"], (cx, cy),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
 
         # Affichage des alertes persistantes
         for i, (message, color, _) in enumerate(persistent_alerts):

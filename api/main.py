@@ -5,12 +5,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from db.connection import get_connection
+from datetime import datetime
 from typing import List
-import json
 
 app = FastAPI(title="VSI - Vidéo Surveillance Intelligente")
 
-# Configuration CORS — permet au frontend React de parler à l'API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,7 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Gestionnaire de connexions WebSocket
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -31,11 +29,27 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
-        """Envoie un message à tous les clients connectés"""
         for connection in self.active_connections:
             await connection.send_json(message)
 
 manager = ConnectionManager()
+
+async def notify_violation(violation_type: str, track_id: int):
+    """
+    Envoie une nouvelle violation à tous les clients WebSocket connectés.
+    """
+    await manager.broadcast({
+        "type": "violation",
+        "violation": {
+            "type": violation_type,
+            "track_id": track_id,
+            "timestamp": str(datetime.now())
+        }
+    })
+
+# Connecte le callback du repository au WebSocket
+import db.repository as repo
+repo.on_violation_callback = notify_violation
 
 @app.get("/")
 def root():
@@ -43,11 +57,10 @@ def root():
 
 @app.get("/violations")
 def get_violations():
-    """Retourne l'historique des violations"""
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT v.id, v.type, v.timestamp,
+                SELECT v.id, v.type, v.zone, v.timestamp,
                        t.track_id, t.object_type
                 FROM violation v
                 JOIN tracked_object t ON v.object_id = t.id
@@ -59,7 +72,6 @@ def get_violations():
 
 @app.get("/stats")
 def get_stats():
-    """Retourne les statistiques globales"""
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) as total FROM tracked_object")
@@ -81,9 +93,22 @@ def get_stats():
         "by_type": by_type
     }
 
+@app.delete("/reset")
+def reset_database():
+    """
+    Vide la base de données — à utiliser avant chaque démo.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM violation")
+            cursor.execute("DELETE FROM tracked_object")
+            conn.commit()
+    return {"message": "Base de données réinitialisée ✅"}
+
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket pour les violations en temps réel"""
     await manager.connect(websocket)
     try:
         while True:

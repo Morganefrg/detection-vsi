@@ -16,5 +16,6 @@ CREATE TABLE violation (
     id          SERIAL PRIMARY KEY,
     object_id   INTEGER NOT NULL REFERENCES tracked_object(id),
     type        VARCHAR(30) NOT NULL CHECK (type IN ('loitering', 'fall_detected', 'parking_violation')),
+    zone        VARCHAR(50),
     timestamp   TIMESTAMP NOT NULL DEFAULT NOW()
 );

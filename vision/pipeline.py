@@ -55,10 +55,11 @@ def run_pipeline(source: str, model_path: str, zones_path: str):
         results = model.track(
             frame,
             persist=True,
-            classes=[0],  # classe 0 = personnes
+            classes=[0],
             conf=0.25,
-            vid_stride=2
-        )
+            vid_stride=4,
+            imgsz=320  # Réduit la taille de l'image analysée
+)
 
         if results[0].boxes.id is None:
             cv2.imshow("VSI - Detection", frame)
